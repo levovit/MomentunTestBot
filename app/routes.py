@@ -1,6 +1,7 @@
-import telebot
-from app import bot, app
 from flask import request
+import telebot
+
+from app import bot, app
 
 
 @app.route('/', methods=['POST'])

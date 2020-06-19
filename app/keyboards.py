@@ -1,6 +1,4 @@
-import telebot
 from telebot import types
-from telebot.types import Message
 
 
 def get_setting_keyboard():
