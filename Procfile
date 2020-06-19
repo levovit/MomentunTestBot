@@ -1,0 +1,1 @@
+web: flask db init; flask db migrate -m "init"; flask db upgrade; python3 run_prod.py -p $PORT
