@@ -1,0 +1,4 @@
+migrations/
+venv/
+.idea/
+app.db
