@@ -5,7 +5,8 @@ from telebot import types
 from telebot.types import Message
 
 from app import db, app
-from app.keyboards import get_setting_keyboard, get_menu_keyboard, get_gender_keyboard
+from app.keyboards import get_setting_keyboard, get_menu_keyboard, get_gender_keyboard, get_back_keyboard, \
+    get_gender_and_back_keyboard
 from app.models import User
 from app import commands_const as cc
 
@@ -86,24 +87,24 @@ def show_settings(message: Message):
 @bot.message_handler(regexp=cc.CHANGE_NAME)
 def change_name(message: Message):
     text_message = "Enter your new name"
-    remove_keyboard = types.ReplyKeyboardRemove()
+    back_keyboard = get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     user.state = cc.STATE_NAME
     db.session.commit()
-    bot.send_message(message.chat.id, text_message, reply_markup=remove_keyboard)
+    bot.send_message(message.chat.id, text_message, reply_markup=back_keyboard)
 
 
 @bot.message_handler(regexp=cc.CHANGE_AGE)
 def change_age(message: Message):
     text_message = "Enter your new age"
-    remove_keyboard = types.ReplyKeyboardRemove()
+    back_keyboard = get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     user.state = cc.CHANGE_AGE
     db.session.commit()
 
-    bot.send_message(message.chat.id, text_message, reply_markup=remove_keyboard)
+    bot.send_message(message.chat.id, text_message, reply_markup=back_keyboard)
 
 
 @bot.message_handler(regexp=cc.CHANGE_GENDER)
@@ -114,7 +115,7 @@ def change_gender(message: Message):
     user.state = cc.STATE_CHANGE_GENDER
     db.session.commit()
 
-    gender_keyboard = get_gender_keyboard()
+    gender_keyboard = get_gender_and_back_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
 
