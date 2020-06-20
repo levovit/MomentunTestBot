@@ -196,10 +196,14 @@ def user_entering_name(message: Message):
 @bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_AGE)
 def user_entering_age(message: Message):
     text = message.text
+    print(text)
+    print(text.isdigit())
     if not text.isdigit():
+        print("here1")
         bot.send_message(message.chat.id, "Must be integer")
         return
     else:
+        print("here2")
         age = int(text)
         if age <= 0 or age > 120:
             text_message = "age should be in the range from 0 to 120"
