@@ -7,6 +7,7 @@ from telebot.types import Message
 from app import db, app
 from app.keyboards import get_setting_keyboard, get_menu_keyboard, get_gender_keyboard
 from app.models import User
+from app import commands_const as cc
 
 
 bot = telebot.TeleBot(app.config["TOKEN"], threaded=False)
@@ -17,55 +18,52 @@ bot.set_webhook(url=app.config["HOST_URL"])
 
 @bot.message_handler(commands=['start'])
 def handle_start(message: Message):
-    print(type(message))
-    print(message.chat.id)
     user = User.query.filter_by(telegram_id=message.chat.id).first()
-    print(user)
     if not user:
-        print("not user")
         user = User(telegram_id=message.chat.id)
         db.session.add(user)
         db.session.commit()
-        state = "name"
+        state = cc.STATE_NAME
     else:
-        print("user")
         state = user.state
 
-    if state == "name" or state == "change name":
+    if state == cc.STATE_NAME or state == cc.STATE_CHANGE_NAME:
         text_message = "Enter your name"
-    elif state == "age" or state == "change age":
+    elif state == cc.STATE_AGE or state == cc.STATE_CHANGE_GENDER:
         text_message = "Enter your age"
-    elif state == "gender" or state == "change gender":
+    elif state == cc.STATE_GENDER or state == cc.STATE_CHANGE_GENDER:
         text_message = "Enter your gender"
     else:
         text_message = "You are already registered"
 
     bot.send_message(message.chat.id, text_message)
-    print(message.text, message.chat.username)
 
 
 @bot.message_handler(commands=['reset'])
 def handle_help(message: Message):
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     if user:
-        user.state = "name"
+        user.state = cc.STATE_NAME
         db.session.commit()
 
     remove_keyboard = types.ReplyKeyboardRemove()
 
     bot.send_message(message.chat.id, "State annulled", reply_markup=remove_keyboard)
-    print(message.text, message.chat.username)
 
 
-@bot.message_handler(regexp="Back")
+@bot.message_handler(regexp=cc.BACK)
 def back_to_menu(message: Message):
     text_message = "Back to Menu"
     menu_keyboard = get_menu_keyboard()
+    user = User.query.filter_by(telegram_id=message.chat.id).first()
+    if user:
+        user.state = cc.STATE_DONE
+        db.session.commit()
 
     bot.send_message(message.chat.id, text_message, reply_markup=menu_keyboard)
 
 
-@bot.message_handler(regexp="📖️ My information")
+@bot.message_handler(regexp=cc.MY_INFORMATION)
 def show_user_info(message: Message):
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     if user:
@@ -76,59 +74,52 @@ def show_user_info(message: Message):
     else:
         text_message = "sorry, you are not in DataBase"
     bot.send_message(message.chat.id, text_message, parse_mode="Markdown")
-    print(message.text, message.chat.username)
 
 
-@bot.message_handler(regexp="⚙️ settings")
+@bot.message_handler(regexp=cc.SETTINGS)
 def show_settings(message: Message):
     text_message = "⚙️ settings"
     settings_keyboard = get_setting_keyboard()
     bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
-    print(message.text, message.chat.username)
 
 
-@bot.message_handler(regexp="Change age")
-def change_age(message: Message):
-    text_message = "Enter your new age"
-    remove_keyboard = types.ReplyKeyboardRemove()
-
-    user = User.query.filter_by(telegram_id=message.chat.id).first()
-    user.state = "change age"
-    db.session.commit()
-
-    bot.send_message(message.chat.id, text_message, reply_markup=remove_keyboard)
-
-
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "change age")
-def new_age(message: Message):
-    text = message.text
-    if not text.isdigit():
-        bot.send_message(message.chat.id, "Must be integer")
-        return
-    else:
-        age = int(text)
-        user = User.query.filter_by(telegram_id=message.chat.id).first()
-        user.age = age
-        user.state = "done"
-        db.session.commit()
-        text_message = "Congratulations, you change age"
-        settings_keyboard = get_setting_keyboard()
-        bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
-
-
-@bot.message_handler(regexp="Change name")
+@bot.message_handler(regexp=cc.CHANGE_NAME)
 def change_name(message: Message):
     text_message = "Enter your new name"
     remove_keyboard = types.ReplyKeyboardRemove()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
-    user.state = "change name"
+    user.state = cc.STATE_NAME
+    db.session.commit()
+    bot.send_message(message.chat.id, text_message, reply_markup=remove_keyboard)
+
+
+@bot.message_handler(regexp=cc.CHANGE_AGE)
+def change_age(message: Message):
+    text_message = "Enter your new age"
+    remove_keyboard = types.ReplyKeyboardRemove()
+
+    user = User.query.filter_by(telegram_id=message.chat.id).first()
+    user.state = cc.CHANGE_AGE
     db.session.commit()
 
     bot.send_message(message.chat.id, text_message, reply_markup=remove_keyboard)
 
 
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "change name")
+@bot.message_handler(regexp=cc.CHANGE_GENDER)
+def change_gender(message: Message):
+    text_message = "Enter your new gender"
+
+    user = User.query.filter_by(telegram_id=message.chat.id).first()
+    user.state = cc.STATE_CHANGE_GENDER
+    db.session.commit()
+
+    gender_keyboard = get_gender_keyboard()
+
+    bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
+
+
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_CHANGE_AGE)
 def new_age(message: Message):
     name = message.text
 
@@ -140,27 +131,31 @@ def new_age(message: Message):
     else:
         user = User.query.filter_by(telegram_id=message.chat.id).first()
         user.name = name
-        user.state = "done"
+        user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Name changed successfully"
         settings_keyboard = get_setting_keyboard()
         bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
-@bot.message_handler(regexp="Change gender")
-def change_gender(message: Message):
-    text_message = "Enter your new gender"
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_CHANGE_AGE)
+def new_age(message: Message):
+    text = message.text
+    if not text.isdigit():
+        bot.send_message(message.chat.id, "Must be integer")
+        return
+    else:
+        age = int(text)
+        user = User.query.filter_by(telegram_id=message.chat.id).first()
+        user.age = age
+        user.state = cc.STATE_DONE
+        db.session.commit()
+        text_message = "Congratulations, you change age"
+        settings_keyboard = get_setting_keyboard()
+        bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
-    user = User.query.filter_by(telegram_id=message.chat.id).first()
-    user.state = "change gender"
-    db.session.commit()
 
-    gender_keyboard = get_gender_keyboard()
-
-    bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
-
-
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "change gender")
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_CHANGE_GENDER)
 def new_gender(message: Message):
     gender = message.text
     if gender not in ("Male", "Female"):
@@ -169,14 +164,14 @@ def new_gender(message: Message):
     else:
         user = User.query.filter_by(telegram_id=message.chat.id).first()
         user.gender = gender
-        user.state = "done"
+        user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Gender changed"
         settings_keyboard = get_setting_keyboard()
         bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "name")
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_NAME)
 def user_entering_name(message: Message):
     text = message.text
 
@@ -187,15 +182,14 @@ def user_entering_name(message: Message):
         bot.send_message(message.chat.id, "Great name")
         user = User.query.filter_by(telegram_id=message.chat.id).first()
         user.name = text
-        user.state = "age"
+        user.state = cc.STATE_AGE
         db.session.commit()
         text_message = "Now, enter your age"
 
     bot.send_message(message.chat.id, text_message)
-    print(message.text, message.chat.username)
 
 
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "age")
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_AGE)
 def user_entering_age(message: Message):
     text = message.text
     if not text.isdigit():
@@ -203,18 +197,22 @@ def user_entering_age(message: Message):
         return
     else:
         age = int(text)
+        if age <= 0 or age > 120:
+            text_message = "age should be in the range from 0 to 120"
+            bot.send_message(message.chat.id, text_message)
+            return
+
         user = User.query.filter_by(telegram_id=message.chat.id).first()
         user.age = age
-        user.state = "gender"
+        user.state = cc.STATE_GENDER
         db.session.commit()
         text_message = "And, enter your gender"
         gender_keyboard = get_gender_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
-    print(message.text, message.chat.username)
 
 
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == "gender")
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_GENDER)
 def user_entering_gender(message: Message):
     gender = message.text
     if gender not in ("Male", "Female"):
@@ -223,11 +221,10 @@ def user_entering_gender(message: Message):
     else:
         user = User.query.filter_by(telegram_id=message.chat.id).first()
         user.gender = gender
-        user.state = "done"
+        user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Thank you for registering!"
 
     menu_keyboard = get_menu_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=menu_keyboard)
-    print(message.text, message.chat.username)
