@@ -5,10 +5,9 @@ from telebot import types
 from telebot.types import Message
 
 from app import db, app
-from app.keyboards import get_setting_keyboard, get_menu_keyboard, get_gender_keyboard, get_back_keyboard, \
-    get_gender_and_back_keyboard
-from app.models import User
 from app import commands_const as cc
+from app import keyboards as key
+from app.models import User
 
 
 bot = telebot.TeleBot(app.config["TOKEN"], threaded=False)
@@ -55,7 +54,7 @@ def handle_help(message: Message):
 @bot.message_handler(regexp=cc.BACK)
 def back_to_menu(message: Message):
     text_message = "Back to Menu"
-    menu_keyboard = get_menu_keyboard()
+    menu_keyboard = key.get_menu_keyboard()
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     if user:
         user.state = cc.STATE_DONE
@@ -80,14 +79,18 @@ def show_user_info(message: Message):
 @bot.message_handler(regexp=cc.SETTINGS)
 def show_settings(message: Message):
     text_message = "⚙️ settings"
-    settings_keyboard = get_setting_keyboard()
+    user = User.query.filter_by(telegram_id=message.chat.id).first()
+    if user:
+        user.state = cc.STATE_DONE
+        db.session.commit()
+    settings_keyboard = key.get_setting_keyboard()
     bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
 @bot.message_handler(regexp=cc.CHANGE_NAME)
 def change_name(message: Message):
     text_message = "Enter your new name"
-    back_keyboard = get_back_keyboard()
+    back_keyboard = key.get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     user.state = cc.STATE_CHANGE_NAME
@@ -98,7 +101,7 @@ def change_name(message: Message):
 @bot.message_handler(regexp=cc.CHANGE_AGE)
 def change_age(message: Message):
     text_message = "Enter your new age"
-    back_keyboard = get_back_keyboard()
+    back_keyboard = key.get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
     user.state = cc.STATE_CHANGE_AGE
@@ -115,7 +118,7 @@ def change_gender(message: Message):
     user.state = cc.STATE_CHANGE_GENDER
     db.session.commit()
 
-    gender_keyboard = get_gender_and_back_keyboard()
+    gender_keyboard = key.get_gender_and_back_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
 
@@ -135,7 +138,7 @@ def new_name(message: Message):
         user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Name changed successfully"
-        settings_keyboard = get_setting_keyboard()
+        settings_keyboard = key.get_setting_keyboard()
         bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
@@ -152,7 +155,7 @@ def new_age(message: Message):
         user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Congratulations, you change age"
-        settings_keyboard = get_setting_keyboard()
+        settings_keyboard = key.get_setting_keyboard()
         bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
@@ -168,7 +171,7 @@ def new_gender(message: Message):
         user.state = cc.STATE_DONE
         db.session.commit()
         text_message = "Gender changed"
-        settings_keyboard = get_setting_keyboard()
+        settings_keyboard = key.get_setting_keyboard()
         bot.send_message(message.chat.id, text_message, reply_markup=settings_keyboard)
 
 
@@ -208,7 +211,7 @@ def user_entering_age(message: Message):
         user.state = cc.STATE_GENDER
         db.session.commit()
         text_message = "And, enter your gender"
-        gender_keyboard = get_gender_keyboard()
+        gender_keyboard = key.get_gender_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
 
@@ -226,6 +229,6 @@ def user_entering_gender(message: Message):
         db.session.commit()
         text_message = "Thank you for registering!"
 
-    menu_keyboard = get_menu_keyboard()
+    menu_keyboard = key.get_menu_keyboard()
 
     bot.send_message(message.chat.id, text_message, reply_markup=menu_keyboard)
