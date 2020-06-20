@@ -90,7 +90,7 @@ def change_name(message: Message):
     back_keyboard = get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
-    user.state = cc.STATE_NAME
+    user.state = cc.STATE_CHANGE_NAME
     db.session.commit()
     bot.send_message(message.chat.id, text_message, reply_markup=back_keyboard)
 
@@ -101,7 +101,7 @@ def change_age(message: Message):
     back_keyboard = get_back_keyboard()
 
     user = User.query.filter_by(telegram_id=message.chat.id).first()
-    user.state = cc.CHANGE_AGE
+    user.state = cc.STATE_CHANGE_AGE
     db.session.commit()
 
     bot.send_message(message.chat.id, text_message, reply_markup=back_keyboard)
@@ -120,8 +120,8 @@ def change_gender(message: Message):
     bot.send_message(message.chat.id, text_message, reply_markup=gender_keyboard)
 
 
-@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_CHANGE_AGE)
-def new_age(message: Message):
+@bot.message_handler(func=lambda message: User.get_state_by_id(message.chat.id) == cc.STATE_CHANGE_NAME)
+def new_name(message: Message):
     name = message.text
 
     len_text = len(name)
