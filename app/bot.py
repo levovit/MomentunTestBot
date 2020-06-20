@@ -30,7 +30,7 @@ def handle_start(message: Message):
 
     if state == cc.STATE_NAME or state == cc.STATE_CHANGE_NAME:
         text_message = "Enter your name"
-    elif state == cc.STATE_AGE or state == cc.STATE_CHANGE_GENDER:
+    elif state == cc.STATE_AGE or state == cc.STATE_CHANGE_AGE:
         text_message = "Enter your age"
     elif state == cc.STATE_GENDER or state == cc.STATE_CHANGE_GENDER:
         text_message = "Enter your gender"
